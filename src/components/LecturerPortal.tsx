@@ -928,6 +928,7 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
   // Search & Filters
   const [studentSearch, setStudentSearch] = useState('');
   const [assignmentSearch, setAssignmentSearch] = useState('');
+  const [assignmentClassFilter, setAssignmentClassFilter] = useState<string>('all');
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>('all');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
 
@@ -962,6 +963,7 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
   const [selectedAsgSubmissionsId, setSelectedAsgSubmissionsId] = useState<string | null>(null);
   const [selectedSubmissionForDetail, setSelectedSubmissionForDetail] = useState<any | null>(null);
   const [submissionManagementSearch, setSubmissionManagementSearch] = useState('');
+  const [submissionClassFilter, setSubmissionClassFilter] = useState<string>('all');
   const [targetStudents, setTargetStudents] = useState<any[]>([]);
   const [targetStudentsLoading, setTargetStudentsLoading] = useState(false);
   const [targetStudentsError, setTargetStudentsError] = useState<string | null>(null);
@@ -1387,13 +1389,50 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
     });
   }, [students, studentSearch, selectedCourseFilter, selectedClassFilter]);
 
+  const availableAssignmentClasses = useMemo(() => {
+    const classesSet = new Set<string>();
+    uniqueClasses.forEach(c => {
+      if (c && c.trim()) classesSet.add(c.trim());
+    });
+    assignments.forEach(a => {
+      if (a.class_name && a.class_name.trim()) classesSet.add(a.class_name.trim());
+    });
+    return Array.from(classesSet).sort();
+  }, [uniqueClasses, assignments]);
+
   const filteredAssignments = useMemo(() => {
-    return assignments.filter(assignment => 
-      assignment.title.toLowerCase().includes(assignmentSearch.toLowerCase()) ||
-      (assignment.course?.code || '').toLowerCase().includes(assignmentSearch.toLowerCase()) ||
-      (assignment.course?.name || '').toLowerCase().includes(assignmentSearch.toLowerCase())
-    );
-  }, [assignments, assignmentSearch]);
+    return assignments.filter(assignment => {
+      const searchLower = assignmentSearch.toLowerCase();
+      const matchSearch =
+        assignment.title.toLowerCase().includes(searchLower) ||
+        (assignment.course?.code || '').toLowerCase().includes(searchLower) ||
+        (assignment.course?.name || '').toLowerCase().includes(searchLower);
+
+      if (!matchSearch) return false;
+
+      if (assignmentClassFilter === 'all') return true;
+
+      if (assignmentClassFilter === 'all_classes') {
+        return assignment.class_name === null;
+      }
+
+      // If assignment was specifically targeted to this class
+      if (assignment.class_name === assignmentClassFilter) return true;
+
+      // If assignment was targeted to "Semua Kelas" (null), check if this assignment's course has this class
+      if (assignment.class_name === null) {
+        const courseHasClass = mockEnrollments.length === 0 || mockEnrollments.some((e: any) =>
+          (e.courseId === assignment.course_id ||
+           e.courseUuid === assignment.course_id ||
+           (assignment.course && (e.courseId === assignment.course.id || e.courseCode === assignment.course.code))) &&
+          e.className?.trim().toLowerCase() === assignmentClassFilter.trim().toLowerCase()
+        );
+        return courseHasClass;
+      }
+
+      return false;
+    });
+  }, [assignments, assignmentSearch, assignmentClassFilter, mockEnrollments]);
 
   // Combined statistics for Dashboard cards
   const stats = useMemo(() => {
@@ -2381,7 +2420,6 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
         <div className="flex items-center gap-3 md:gap-4">
           <button className="p-2 hover:bg-slate-50 rounded-full text-slate-500 hover:text-slate-700 transition-colors relative cursor-pointer" title="Notifikasi">
             <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
           </button>
           
           <div className="flex items-center gap-3 border-l border-[#E9EEF5] pl-3 md:pl-4">
@@ -2941,7 +2979,7 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
             <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0F172A] flex items-center gap-2">
-                  Selamat datang kembali, {user.name ? user.name.split(' ')[0] : 'Dosen'} 👋
+                  Selamat datang kembali, {user.name ? user.name.split(' ')[0] : 'Dosen'}
                 </h1>
                 <p className="text-xs text-[#64748B] mt-1 font-normal">
                   Kelola tugas dan perkuliahan Anda dengan lebih efisien.
@@ -3637,16 +3675,29 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
 
               {/* Assignments list table */}
               <div className="bg-white rounded-2xl border border-outline-variant/30 auth-card-shadow overflow-hidden">
-                <div className="p-4 border-b border-outline-variant/15 flex gap-3">
+                <div className="p-4 border-b border-outline-variant/15 flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
                     <input 
-                      className="pl-9 pr-4 py-2 bg-gray-50 border border-outline-variant/60 rounded-xl text-xs focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all w-full font-medium text-primary"
+                      className="pl-9 pr-4 py-2 bg-gray-50 border border-outline-variant/60 rounded-xl text-xs focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all w-full font-medium text-primary font-sans"
                       placeholder="Cari tugas berdasarkan judul atau kode..." 
                       type="text"
                       value={assignmentSearch}
                       onChange={(e) => setAssignmentSearch(e.target.value)}
                     />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="px-3 py-2 bg-gray-50 border border-outline-variant/60 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all text-primary cursor-pointer font-sans"
+                      value={assignmentClassFilter}
+                      onChange={(e) => setAssignmentClassFilter(e.target.value)}
+                    >
+                      <option value="all">Semua Kelas</option>
+                      <option value="all_classes">Umum (Semua Kelas)</option>
+                      {availableAssignmentClasses.map(cls => (
+                        <option key={cls} value={cls}>Kelas {cls}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -3701,6 +3752,11 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
                                 type="button"
                                 onClick={() => {
                                   setSelectedAsgSubmissionsId(asg.id);
+                                  if (assignmentClassFilter !== 'all' && assignmentClassFilter !== 'all_classes') {
+                                    setSubmissionClassFilter(assignmentClassFilter);
+                                  } else {
+                                    setSubmissionClassFilter('all');
+                                  }
                                 }}
                                 className="p-1.5 hover:bg-slate-100 rounded-lg text-primary transition-colors cursor-pointer inline-flex items-center"
                                 title="Lihat Pengumpulan"
@@ -3740,6 +3796,7 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
                   onClick={() => {
                     setSelectedAsgSubmissionsId(null);
                     setSubmissionManagementSearch('');
+                    setSubmissionClassFilter('all');
                   }}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline cursor-pointer"
                 >
@@ -4016,10 +4073,23 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
                 }
 
                 /* SUB-SUB VIEW: LIST TARGET STUDENTS & SUBMISSIONS */
-                const filteredTargetStudents = (targetStudents || []).filter(s => {
+                const submissionClasses = Array.from(
+                  new Set(
+                    (targetStudents || [])
+                      .map((s: any) => s.className?.trim())
+                      .filter(Boolean)
+                  )
+                ).sort();
+
+                const classFilteredTargetStudents = (targetStudents || []).filter((s: any) => {
+                  if (submissionClassFilter === 'all') return true;
+                  return s.className?.trim().toLowerCase() === submissionClassFilter.trim().toLowerCase();
+                });
+
+                const filteredTargetStudents = classFilteredTargetStudents.filter((s: any) => {
                   const q = submissionManagementSearch.trim().toLowerCase();
                   if (!q) return true;
-                  return s.name.toLowerCase().includes(q) || s.nim.toLowerCase().includes(q);
+                  return (s.name || '').toLowerCase().includes(q) || (s.nim || '').toLowerCase().includes(q);
                 });
 
                 return (
@@ -4073,30 +4143,30 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                         <div className="bg-white p-4 rounded-2xl border border-outline-variant/30 auth-card-shadow text-center">
                           <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Total Mahasiswa</p>
-                          <p className="text-xl font-bold text-primary mt-1">{targetStudents.length}</p>
+                          <p className="text-xl font-bold text-primary mt-1">{classFilteredTargetStudents.length}</p>
                         </div>
                         <div className="bg-white p-4 rounded-2xl border border-outline-variant/30 auth-card-shadow text-center">
                           <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Sudah Mengumpulkan</p>
                           <p className="text-xl font-bold text-emerald-600 mt-1">
-                            {targetStudents.filter(t => t.submission !== null).length}
+                            {classFilteredTargetStudents.filter(t => t.submission !== null).length}
                           </p>
                         </div>
                         <div className="bg-white p-4 rounded-2xl border border-outline-variant/30 auth-card-shadow text-center">
                           <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider">Belum Mengumpulkan</p>
                           <p className="text-xl font-bold text-red-600 mt-1">
-                            {targetStudents.filter(t => t.submission === null).length}
+                            {classFilteredTargetStudents.filter(t => t.submission === null).length}
                           </p>
                         </div>
                         <div className="bg-white p-4 rounded-2xl border border-outline-variant/30 auth-card-shadow text-center">
                           <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Sudah Dinilai</p>
                           <p className="text-xl font-bold text-primary mt-1">
-                            {targetStudents.filter(t => t.submission !== null && t.submission.grade !== null).length}
+                            {classFilteredTargetStudents.filter(t => t.submission !== null && t.submission.grade !== null).length}
                           </p>
                         </div>
                         <div className="bg-white p-4 rounded-2xl border border-outline-variant/30 auth-card-shadow text-center">
                           <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Terlambat</p>
                           <p className="text-xl font-bold text-amber-600 mt-1">
-                            {targetStudents.filter(t => {
+                            {classFilteredTargetStudents.filter(t => {
                               if (!t.submission) return false;
                               return new Date(t.submission.submitted_at) > new Date(selectedAssignmentObj.deadline);
                             }).length}
@@ -4105,9 +4175,9 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
                       </div>
                     )}
 
-                    {/* Table area with search input */}
+                    {/* Table area with search input and class filter */}
                     <div className="bg-white rounded-2xl border border-outline-variant/30 auth-card-shadow overflow-hidden">
-                      <div className="p-4 border-b border-outline-variant/15 flex gap-3">
+                      <div className="p-4 border-b border-outline-variant/15 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
                         <div className="relative flex-1">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
                           <input
@@ -4117,6 +4187,18 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
                             value={submissionManagementSearch}
                             onChange={(e) => setSubmissionManagementSearch(e.target.value)}
                           />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="px-3 py-2 bg-gray-50 border border-outline-variant/60 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all text-primary cursor-pointer font-sans"
+                            value={submissionClassFilter}
+                            onChange={(e) => setSubmissionClassFilter(e.target.value)}
+                          >
+                            <option value="all">Semua Kelas</option>
+                            {submissionClasses.map(cls => (
+                              <option key={cls} value={cls}>Kelas {cls}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
 

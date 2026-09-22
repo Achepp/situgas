@@ -1032,7 +1032,7 @@ export default function StudentPortal({ user, onLogout }: StudentPortalProps) {
                             </div>
                             <p className="text-xs font-semibold text-[#0F172A] pt-1">
                               {momentumStats.completed === momentumStats.total && momentumStats.total > 0
-                                ? 'Semua tugas telah selesai! 🎉'
+                                ? 'Semua tugas telah selesai!'
                                 : momentumStats.total === 0
                                 ? 'Belum ada tugas aktif'
                                 : `${momentumStats.pending} tugas belum dikerjakan`}
