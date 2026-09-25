@@ -1817,8 +1817,8 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
       alert('Judul tugas wajib diisi.');
       return;
     }
-    if (!formDescription.trim()) {
-      alert('Deskripsi tugas wajib diisi.');
+    if (!formDescription || !formDescription.trim()) {
+      alert('Deskripsi instruksi tugas wajib diisi.');
       return;
     }
     if (!formDeadline) {
@@ -1848,7 +1848,7 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
       course_id: formCourse,
       class_name: formTargetClass === 'all' ? null : formTargetClass,
       title: formTitle.trim(),
-      description: formDescription.trim(),
+      description: formDescription,
       deadline: deadlineIso,
       max_points: normalizedMaxPoints,
       status: formStatus,
@@ -4097,10 +4097,25 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
                     {/* Assignment Header / Meta info */}
                     <div className="bg-white p-6 rounded-2xl border border-outline-variant/30 auth-card-shadow">
                       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-[10px] text-secondary font-semibold uppercase tracking-wider">{selectedAssignmentObj.course?.name || 'Mata Kuliah'}</p>
                           <h1 className="text-xl font-bold text-primary mt-1 font-sans">{selectedAssignmentObj.title}</h1>
-                          <p className="text-xs text-on-surface-variant font-medium mt-1 leading-relaxed">{selectedAssignmentObj.description}</p>
+                          <div className="mt-3 bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 sm:p-4">
+                            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 font-sans">
+                              DESKRIPSI / INSTRUKSI TUGAS
+                            </span>
+                            <div 
+                              className="text-xs sm:text-sm text-slate-800 font-normal leading-[1.75] font-sans whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                              style={{
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'anywhere',
+                                lineHeight: 1.75,
+                              }}
+                            >
+                              {selectedAssignmentObj.description || 'Tidak ada deskripsi instruksi.'}
+                            </div>
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-2.5 shrink-0">
                           <div className="bg-primary/5 border border-primary/10 px-3 py-2 rounded-xl text-xs font-semibold text-primary">
@@ -5419,10 +5434,17 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
                 <label className="text-xs font-bold text-primary block font-sans" htmlFor="description">Deskripsi Instruksi *</label>
                 <textarea 
                   id="description" 
-                  className="w-full border border-outline-variant/60 rounded-xl p-2.5 bg-white text-xs font-semibold focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all outline-none text-primary h-24 resize-none font-sans"
+                  className="w-full border border-outline-variant/60 rounded-xl p-3 bg-white text-xs sm:text-sm font-normal focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all outline-none text-slate-800 min-h-[140px] resize-y font-sans leading-[1.7] whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'anywhere',
+                    lineHeight: 1.7,
+                  }}
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Deskripsikan instruksi pengerjaan tugas secara rinci..."
+                  placeholder="Contoh:&#10;1. Buat database PostgreSQL.&#10;2. Buat tabel mahasiswa.&#10;3. Buat tabel mata kuliah.&#10;&#10;Catatan:&#10;- Gunakan PostgreSQL.&#10;- Sertakan screenshot query."
+                  required
                 />
               </div>
 

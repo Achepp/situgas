@@ -710,9 +710,27 @@ export default function StudentPortal({ user, onLogout }: StudentPortalProps) {
               <h2 className="text-xl md:text-2xl font-bold text-primary tracking-tight leading-tight">
                 {selectedAssignment.title}
               </h2>
-              <p className="text-sm text-on-surface-variant font-medium mt-2 leading-relaxed">
-                {selectedAssignment.description}
-              </p>
+
+              {/* Deskripsi / Instruksi Tugas Container */}
+              <div className="mt-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-4 sm:p-5 md:p-6 shadow-xs">
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200/70">
+                  <FileText className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider font-sans">
+                    DESKRIPSI / INSTRUKSI TUGAS
+                  </span>
+                </div>
+                <div 
+                  className="text-sm sm:text-[15px] text-slate-800 font-normal leading-[1.75] sm:leading-[1.8] font-sans whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'anywhere',
+                    lineHeight: 1.75,
+                  }}
+                >
+                  {selectedAssignment.description || 'Tidak ada deskripsi atau instruksi khusus untuk tugas ini.'}
+                </div>
+              </div>
             </section>
 
             {/* Submission Status Indicator */}
