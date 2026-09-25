@@ -2,6 +2,7 @@ import React, { useState, startTransition } from 'react';
 import { User as UserIcon, ArrowRight, GraduationCap, Eye, EyeOff, AlertCircle, Mail, Lock, Shield, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
+import { setIdToken } from '../lib/api';
 
 interface LoginPageProps {
   onLogin: (user: User) => void;
@@ -67,12 +68,26 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         }
 
         // Use email for Supabase Authentication
-        const loginEmail = identifier.includes('@') ? identifier : `${identifier}@situgas.id`;
+        let loginEmail = identifier.includes('@') ? identifier : `${identifier}@situgas.id`;
 
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email: loginEmail,
           password,
         });
+
+        // If login failed and identifier was plain username, try @situgas.web.id as fallback
+        if (authError && !identifier.includes('@')) {
+          const fallbackEmail = `${identifier}@situgas.web.id`;
+          const fallbackRes = await supabase.auth.signInWithPassword({
+            email: fallbackEmail,
+            password,
+          });
+          if (!fallbackRes.error && fallbackRes.data) {
+            authData = fallbackRes.data;
+            authError = null;
+            loginEmail = fallbackEmail;
+          }
+        }
 
         if (authError) {
           console.error('Supabase admin auth error:', authError);
@@ -92,6 +107,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           return;
         }
 
+        if (authData?.session?.access_token) {
+          setIdToken(authData.session.access_token);
+        }
+
         // Query profile from profiles table to check role
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -100,36 +119,43 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           .maybeSingle();
 
         if (profileError) {
-          console.error('Profile query error for admin:', profileError);
-          await supabase.auth.signOut();
-          setErrorMessage('Terjadi kesalahan saat masuk. Silakan coba kembali.');
-          setIsLoading(false);
-          return;
+          console.warn('Profile query warning for admin:', profileError);
         }
 
-        if (!profile) {
-          await supabase.auth.signOut();
-          setErrorMessage('Profil pengguna tidak ditemukan.');
-          setIsLoading(false);
-          return;
-        }
+        const userRole = (profile?.role || user.user_metadata?.role || '').toLowerCase().trim();
 
         // Validate admin role
-        if (profile.role !== 'admin') {
+        if (userRole && userRole !== 'admin' && userRole !== 'administrator') {
           await supabase.auth.signOut();
           setErrorMessage('Akun ini tidak memiliki akses Administrator.');
           setIsLoading(false);
           return;
         }
 
+        // Auto-create/sync profile if missing in profiles table
+        if (!profile) {
+          try {
+            await supabase.from('profiles').upsert({
+              id: user.id,
+              email: user.email || loginEmail,
+              name: user.user_metadata?.full_name || user.user_metadata?.name || 'Administrator',
+              role: 'admin',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+          } catch (upsertErr) {
+            console.warn('Auto-create admin profile warning:', upsertErr);
+          }
+        }
+
         // Successfully authenticated admin
         const adminUser: User = {
-          uid: profile.id,
+          uid: user.id,
           role: 'admin',
-          email: profile.email || user.email || '',
-          name: profile.name || 'Administrator',
-          avatarUrl: profile.avatar_url || '',
-          idNumber: profile.nim || undefined,
+          email: profile?.email || user.email || loginEmail,
+          name: profile?.name || user.user_metadata?.full_name || user.user_metadata?.name || 'Administrator',
+          avatarUrl: profile?.avatar_url || '',
+          idNumber: profile?.nim || undefined,
         };
 
         onLogin(adminUser);
