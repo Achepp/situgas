@@ -17,6 +17,7 @@ import { COURSES } from '../data';
 import { apiRequest } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@supabase/supabase-js';
+import { AssignmentDescriptionRenderer, AutoLinkText } from './AutoLinkText';
 
 interface LecturerPortalProps {
   user: User;
@@ -4104,17 +4105,11 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
                             <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 font-sans">
                               DESKRIPSI / INSTRUKSI TUGAS
                             </span>
-                            <div 
+                            <AssignmentDescriptionRenderer
+                              content={selectedAssignmentObj.description}
+                              fallbackText="Tidak ada deskripsi instruksi."
                               className="text-xs sm:text-sm text-slate-800 font-normal leading-[1.75] font-sans whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
-                              style={{
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                overflowWrap: 'anywhere',
-                                lineHeight: 1.75,
-                              }}
-                            >
-                              {selectedAssignmentObj.description || 'Tidak ada deskripsi instruksi.'}
-                            </div>
+                            />
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2.5 shrink-0">
@@ -4505,7 +4500,10 @@ export default function LecturerPortal({ user, onLogout }: LecturerPortalProps) 
                         <span className="px-2.5 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full">Pertemuan {selectedMeetingForMaterials.meeting_number}</span>
                         <h2 className="text-base font-bold text-primary mt-1.5">{selectedMeetingForMaterials.title}</h2>
                         {selectedMeetingForMaterials.description && (
-                          <p className="text-xs font-medium text-on-surface-variant mt-1 leading-relaxed">{selectedMeetingForMaterials.description}</p>
+                          <AssignmentDescriptionRenderer
+                            content={selectedMeetingForMaterials.description}
+                            className="text-xs font-medium text-on-surface-variant mt-1 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                          />
                         )}
                       </div>
                       <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full self-start sm:self-auto ${

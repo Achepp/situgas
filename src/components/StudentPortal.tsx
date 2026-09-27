@@ -9,6 +9,7 @@ import { User, Assignment } from '../types';
 import { COURSES } from '../data';
 import { apiRequest } from '../lib/api';
 import { supabase } from '../lib/supabase';
+import { AssignmentDescriptionRenderer, AutoLinkText } from './AutoLinkText';
 
 interface StudentPortalProps {
   user: User;
@@ -719,17 +720,10 @@ export default function StudentPortal({ user, onLogout }: StudentPortalProps) {
                     DESKRIPSI / INSTRUKSI TUGAS
                   </span>
                 </div>
-                <div 
+                <AssignmentDescriptionRenderer
+                  content={selectedAssignment.description}
                   className="text-sm sm:text-[15px] text-slate-800 font-normal leading-[1.75] sm:leading-[1.8] font-sans whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'anywhere',
-                    lineHeight: 1.75,
-                  }}
-                >
-                  {selectedAssignment.description || 'Tidak ada deskripsi atau instruksi khusus untuk tugas ini.'}
-                </div>
+                />
               </div>
             </section>
 
@@ -1371,9 +1365,11 @@ export default function StudentPortal({ user, onLogout }: StudentPortalProps) {
 
                     <div className="bg-white p-5 rounded-2xl border border-outline-variant/30 auth-card-shadow space-y-3 font-sans">
                       <h4 className="text-xs font-bold text-primary uppercase tracking-wider border-b border-outline-variant/15 pb-2">Deskripsi Rujukan</h4>
-                      <p className="text-xs text-on-surface-variant font-medium leading-relaxed whitespace-pre-wrap">
-                        {selectedMeeting.description || 'Tidak ada deskripsi rujukan tambahan untuk pertemuan ini.'}
-                      </p>
+                      <AssignmentDescriptionRenderer
+                        content={selectedMeeting.description}
+                        fallbackText="Tidak ada deskripsi rujukan tambahan untuk pertemuan ini."
+                        className="text-xs text-on-surface-variant font-medium leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                      />
                     </div>
 
                     <div className="space-y-3 font-sans">
